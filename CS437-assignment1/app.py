@@ -6,6 +6,7 @@ from flask_mail import Mail, Message
 from PIL import Image, ImageDraw, ImageFont
 import io
 import random
+import requests
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
@@ -212,7 +213,21 @@ def admin_login():
 
     return render_template('admin_login.html', form=form)
 
-
+################################################################################
+#Fetch Data
+def fetch_api_data():
+    #Fetch the data from the API
+    api_url = 'https://www.travel-advisory.info/api'
+    
+    try:
+        response = requests.get(api_url)
+        if response.status_code == 200:
+            data = response.json()
+            return data
+        else:
+            return None
+    except requests.RequestException:
+        return None
 
 
 
@@ -222,7 +237,95 @@ def admin_login():
 #home page
 @app.route('/home')
 def home():
-    return render_template('home_page.html')
+    #Fetch the data from the API 
+    api_response = fetch_api_data()
+    
+    #Extract the information 
+    if api_response and 'data' in api_response:
+        countries_data = api_response['data']
+        countries_info = []
+
+        #Iterate through all the countries
+        for country_code, country_data in countries_data.items():
+            country_info = {
+                'code': country_code,
+                'name': country_data.get('name'),
+                'continent': country_data.get('continent'),
+                'advisory_score': country_data.get('advisory', {}).get('score'),
+                'advisory_sources_active': country_data.get('advisory', {}).get('sources_active'),
+                'advisory_message': country_data.get('advisory', {}).get('message'),
+                'advisory_updated': country_data.get('advisory', {}).get('updated'),
+                'advisory_source': country_data.get('advisory', {}).get('source')
+            }
+            countries_info.append(country_info)
+
+        #Send the data
+        return render_template('home_page.html', countries_info=countries_info)
+    else:
+        
+        return render_template('home_page.html', error_message='Failed to fetch or parse data')
+    
+from flask import request
+
+
+@app.route('/all_countries')
+def all_countries():
+    #Fetch data from the API
+    api_response = fetch_api_data()
+    
+    #Extract information
+    if api_response and 'data' in api_response:
+        countries_data = api_response['data']
+        countries_info = []
+
+        #Iterate through all countries 
+        for country_code, country_data in countries_data.items():
+            country_info = {
+                'code': country_code,
+                'name': country_data.get('name'),
+                'continent': country_data.get('continent'),
+                'advisory_score': country_data.get('advisory', {}).get('score'),
+                'advisory_sources_active': country_data.get('advisory', {}).get('sources_active'),
+                'advisory_message': country_data.get('advisory', {}).get('message'),
+                'advisory_updated': country_data.get('advisory', {}).get('updated'),
+                'advisory_source': country_data.get('advisory', {}).get('source')
+            }
+            countries_info.append(country_info)
+
+        #Send the data 
+        return render_template('all_countries.html', countries_info=countries_info)
+    else:
+        return render_template('all_countries.html', error_message='Failed to fetch or parse data')
+    
+from flask import request
+
+
+@app.route('/search', methods=['GET'])
+def search():
+    query = request.args.get('query')  # Retrieve the query parameter from the request URL
+    api_response = fetch_api_data()
+    # Check if the query parameter is present and the API response exists
+    if query and 'data' in api_response:
+        search_results = []
+        for country_code, country_data in api_response['data'].items():
+            country_name = country_data.get('name', '').lower()
+            #Check if the query matches the country name 
+            if query.lower() in country_name:
+                search_results.append({
+                    'code': country_code,
+                    'name': country_data.get('name'),
+                    'continent': country_data.get('continent'),
+                    'advisory_score': country_data.get('advisory', {}).get('score'),
+                    'advisory_sources_active': country_data.get('advisory', {}).get('sources_active'),
+                    'advisory_message': country_data.get('advisory', {}).get('message'),
+                    'advisory_updated': country_data.get('advisory', {}).get('updated'),
+                    'advisory_source': country_data.get('advisory', {}).get('source')
+                })
+
+        # Render the search results template with the filtered data
+        return render_template('search_results.html', query=query, search_results=search_results)
+
+    return render_template('search_results.html', query=query, search_results=None)
 
 
 #when we choose amdin or user login in home_page.html
@@ -237,5 +340,5 @@ def choose_login(role):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=8080)
 

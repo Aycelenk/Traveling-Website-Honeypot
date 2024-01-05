@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Info Page</title>
+    <style>
+        .container {
+            display: flex;
+            align-items: center;
+            flex-direction: column;
+            height: 150vh; 
+            padding: 50px 150px; 
+            border-radius: 10px;
+        }
+        .country {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            
+        }
+        .comments{
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .comment-textarea{
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .comment-button{
+            width: 100%;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .country-alt {
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .country-name {
+            background-color:  #DAA520;
+            padding: 5px 10px;
+            margin: 10px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .advisory-score{
+            width: 49%; /* Adjust width as needed */
+            border: 1px solid #ccc;
+            margin-right: 10px;
+            padding: 5px;
+            padding-left: 10px;
+            border-radius: 10px;
+            font-size: 20px;
+            background-color: #ADD8E6;
+        }
+        .sources-active {
+            width: 47%; /* Adjust width as needed */
+            border: 1px solid #ccc;
+            margin-left: 10px;
+            margin-right: 15px;
+            padding: 5px;
+            padding-left: 10px;
+            border-radius: 10px;
+            font-size: 20px;
+            background-color: #ADD8E6;
+        }
+
+        .other-info {
+            display: flex;
+            justify-content: space-between;
+            border: 1px solid #ccc;
+            margin: 10px;
+            border-radius: 10px;
+        }
+
+        .info-column{
+            width: 49%;
+            margin: 10px;
+            margin-right: 5px;
+            font-size: 20px;
+        }
+
+        .risk-column{
+            width: 45%;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px;
+            border-radius: 10px;
+        }
+        .box{
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            margin: 10px;
+            padding: 0px;
+        }
+        .box-header{
+            width: 100%;
+            border-radius: 8px;
+            padding: 1px;
+            margin: 0;
+            font-size: 15px;
+        }
+        .box-content{
+            padding-left: 10px;
+            padding-right: 10px;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+            {% if search_results %}
+               
+                    {% for result in search_results %}
+                        <div class="country">
+                            <div class="country-alt">
+                                <div class="country-name">
+                                    <h2 style="padding-left: 10px;">{{ result.name }} ({{ result.continent }})</h2>
+                                </div>
+                                <div class="info-row">
+                                    <div class="sources-active">
+                                        <p style="padding-left: 10px;">Advisory Score: {{ result.advisory_score }}/5 ({{ result.advisory_score }} out of 5)</p>
+                                    </div>
+                                    <div class="advisory-score">
+                                        <p style="padding-left: 10px;">Sources Active: {{ result.advisory_sources_active }}</p>
+                                    </div>
+                                </div>
+                                <div class="other-info">
+                                    <div class="info-column">
+                                        <p>{{ result.advisory_message }}</p>
+                                        <p>Last Updated: {{ result.advisory_updated }}</p>
+                                        <p>Source: <a href="{{ result.advisory_source }}" target="_blank">{{ result.advisory_source }}</a></p>
+                                    </div>
+                                    <div class="risk-column" >
+                                        <p style="font-size: 20px; padding-left:10px;">Risk Table</p>
+                                        <div class="box" style="border-color: #FFB6C1;">
+                                            <div class="box-header" style="background-color: #FFB6C1;" >
+                                                <p style="padding-left :10px;">Extreme Warning (index value: 4.5 - 5)</p>
+                                            </div>
+                                            <div class="box-content">
+                                                <p>You should avoid any trips. A high warning index is a sound indicator of potential harm to your health and well-being.</p>
+                                            </div>
+                                          
+                                        </div>
+
+                                        <div class="box" style="border-color: #FFD700;">
+                                            <div class="box-header" style="background-color: #FFD700;" >
+                                                <p style="padding-left :10px;">High Risk (index value: 3.5 - 4.5)</p>
+                                            </div>
+                                            <div class="box-content">
+                                                <p>Travel should be reduced to a necessary minimum and be conducted with good preparation and high attention.</p>
+                                            </div>
+                                          
+                                        </div>
+
+                                        <div class="box" style="border-color: #ADD8E6;">
+                                            <div class="box-header" style="background-color: #ADD8E6;" >
+                                                <p style="padding-left :10px;">Medium Risk (index value: 2.5 - 3.5)</p>
+                                            </div>
+                                            <div class="box-content">
+                                                <p >Warnings often relate to specific regions within a country. However, high attention is still advised when moving around.</p>
+                                            </div>
+                                          
+                                        </div>
+
+                                        <div class="box" style="border-color: #98FB98;">
+                                            <div class="box-header" style="background-color: #98FB98;">
+                                                <p style="padding-left :10px;">Low Risk (index value: 0 - 2.5)</p>
+                                            </div>
+                                            <div class="box-content">
+                                                <p>Usually this is an indicator that travelling in this country is relatively safe. Higher attention is advised with values > 1.</p>
+                                            </div>
+                                          
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    {% endfor %}
+               
+            {% else %}
+                <p>No results found for "{{ query }}".</p>
+            {% endif %}
+       
+
+        <div class="comments">
+            <p style="padding-left:10px;">Comments</p>
+            <textarea class="comment-textarea" id="commentInput" rows="4" cols="50" placeholder="Enter your comment"></textarea>
+            <button class="comment-button">Add Comment</button>
+        </div>
+    </div>
+</body>
+</html>
+{% endblock %}

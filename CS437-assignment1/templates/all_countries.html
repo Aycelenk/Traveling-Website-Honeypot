@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Countries</title>
+    <style>
+        .data-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+            margin-top: 30px;
+        }
+
+        .country-box {
+            text-align: center;
+            border: 1px solid #ccc;
+            padding: 10px;
+            width: calc(33.33% - 20px);
+            box-sizing: border-box;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            border-radius: 20px;
+        }
+
+        .country-name {
+            background-color: #DAA520;
+            border-radius: 20px;
+        }
+
+        .country-info {
+            background-color: white;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    
+    <div class="data-container">
+        {% for country in countries_info %}
+            <div class="country-box">
+                <div class="country-name">
+                    <h2><a href="/search?query={{ country.name }}">{{ country.name }} ({{ country.continent }})</a></h2>
+                </div>
+                <div class="country-info">
+                    <p>Advisory Score: {{ country.advisory_score }}</p>
+                    <p>Sources Active: {{ country.advisory_sources_active }}</p>
+                    <p>{{ country.advisory_message }}</p>
+                    <p>Last Updated: {{ country.advisory_updated }}</p>
+                    <p>Source: <a href="{{ country.advisory_source }}" target="_blank">{{ country.advisory_source }}</a></p>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
+
+
+{% endblock %}
