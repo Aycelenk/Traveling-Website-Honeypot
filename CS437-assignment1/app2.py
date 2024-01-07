@@ -37,7 +37,8 @@ mail = Mail(app)
 # MongoDB Configuration
 app.config[
     "MONGO_URI"
-] = "mongodb+srv://<username>:<password>@cluster0.6ofoijn.mongodb.net/task4?retryWrites=true&w=majority"  # MODIFY THIS!!! You can use the link that I sent you separately
+] = "mongodb+srv://aycelen:aycelen123@cluster0.6ofoijn.mongodb.net/?retryWrites=true&w=majority"
+# MODIFY THIS!!! You can use the link that I sent you separately
 mongo = PyMongo(app)
 
 
