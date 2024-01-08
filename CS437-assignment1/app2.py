@@ -46,9 +46,9 @@ def send_reset_code_sms(phone_number, code):
 @app.route("/admin/forget_password_sms", methods=["POST","GET"])
 def forget_password_sms():
     if request.method == "GET":
-        phone_number = request.form.get("phone_number")  # Assuming phone_number is provided in the form
+        phone_number = request.form.get("phone")  # Assuming phone_number is provided in the form
         # Check if the phone_number exists in the dataset
-        if mongo.db.admins.find_one({"phone_number": phone_number}):##I'm assuming the problem is on this line
+        if mongo.db.admins.find_one({"phone": phone_number}):##I'm assuming the problem is on this line
             reset_code = generate_reset_code()  # Generate a reset code
             # Send the reset code via SMS
             send_reset_code_sms(phone_number, reset_code)
@@ -56,7 +56,7 @@ def forget_password_sms():
             return redirect(url_for("admin_reset_password"))  # Redirect to password reset page
         else:
             flash("Phone number not found. Please enter a registered phone number.", "danger")
-            return redirect(url_for("admin_forget_password_sms"))  # Redirect to forget password page for admin
+            return redirect(url_for("forget_password_sms"))  # Redirect to forget password page for admin
     # Ensure a valid response is returned for all cases
     return render_template("error.html", message="Invalid request")
 
@@ -265,6 +265,7 @@ def login():
 
         if user:
             flash("Login successful!", "success")
+            session["user_role"] = "user"  # Set the session variable for the admin role
             return redirect(url_for("home"))
 
         else:
@@ -292,6 +293,7 @@ def admin_login():
 
         if admin:
             flash("Admin Login successful!", "success")
+            session["user_role"] = "admin"  # Set the session variable for the admin role
             return redirect(url_for("home"))
 
         else:
@@ -474,13 +476,60 @@ def comment():
 
 
 # comment deletion router
-@app.route("/comment/<comment_id>", methods=["DELETE"])  # GUYS !!! Needs to be implemented in the fronted 
+#@app.route("/comment/<comment_id>", methods=["DELETE"])  # GUYS !!! Needs to be implemented in the fronted 
+#def delete_comment(comment_id):
+#    mongo.db.comments.delete_one({"_id": ObjectId(comment_id)})
+#    return jsonify({"message": "Comment deleted successfully!"})
+
+import requests
+
+@app.route("/comments")
+def get_comments():
+    # Fetch comments from the API
+    response = requests.get("http://127.0.0.1:3000/comment")
+    if response.status_code == 200:
+        comments = response.json()["comments"]
+        return render_template("comments.html", comments=comments)
+    else:
+        return render_template("comments.html", comments=None)
+
+# Route to render the comment form
+@app.route("/comment_form", methods=["GET"])
+def comment_form():
+    return render_template("comments.html")
+
+# Add comment route
+@app.route("/add_comment", methods=["POST"])
+def add_comment():
+    if request.method == "POST":
+        content = request.form.get("content")
+        username = request.form.get("username")
+
+        if content and username:
+            comment = {
+                "content": content,
+                "username": username
+            }
+
+            # Save the comment to the MongoDB collection
+            mongo.db.comments.insert_one(comment)
+            
+            # Redirect to a success page or route
+            return redirect(url_for("get_comments"))  # Replace "comment_success" with your success route
+        else:
+            return "Invalid comment data", 400  # Return an error message or status code
+    else:
+        return "Method not allowed", 405 
+
+# Delete comment route, accessible only to admins
+@app.route("/delete_comment/<comment_id>", methods=["GET"])
 def delete_comment(comment_id):
-    mongo.db.comments.delete_one({"_id": ObjectId(comment_id)})
-    return jsonify({"message": "Comment deleted successfully!"})
-
-
-
+    if "user_role" in session and session["user_role"] == "admin":
+        mongo.db.comments.delete_one({"_id": ObjectId(comment_id)})
+        return redirect(url_for("get_comments"))
+    else:
+        flash("You are not authorized to perform this action.", "danger")
+        return redirect(url_for("get_comments"))
 
 if __name__ == "__main__":
     app.run(debug=True, port=3000)
