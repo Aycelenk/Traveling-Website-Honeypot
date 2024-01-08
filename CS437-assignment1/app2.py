@@ -20,9 +20,46 @@ from PIL import Image, ImageDraw, ImageFont
 import io
 import random
 import requests
+from pymongo import MongoClient
+from twilio.rest import Client
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "your_secret_key"
+
+#Twilio credentials
+account_sid = 'AC6f8da55ae34b0af3c16f6e8f0413cc53'##You yan enter your own credentials
+auth_token = 'bec735e9ec0f6ccee0d17adefb9e503a'
+twilio_phone_number = '+905534940657'
+
+# Twilio client initialization
+client = Client(account_sid, auth_token)
+
+# function to send a password reset code via SMS
+def send_reset_code_sms(phone_number, code):
+    message = client.messages.create(
+        body=f"Your admin password reset code is: {code}. Enter this code to reset your password.",
+        from_=twilio_phone_number,
+        to=phone_number
+    )
+
+##Not working correctly right now
+@app.route("/admin/forget_password_sms", methods=["POST","GET"])
+def forget_password_sms():
+    if request.method == "GET":
+        phone_number = request.form.get("phone_number")  # Assuming phone_number is provided in the form
+        # Check if the phone_number exists in the dataset
+        if mongo.db.admins.find_one({"phone_number": phone_number}):##I'm assuming the problem is on this line
+            reset_code = generate_reset_code()  # Generate a reset code
+            # Send the reset code via SMS
+            send_reset_code_sms(phone_number, reset_code)
+            session["reset_code"] = reset_code
+            return redirect(url_for("admin_reset_password"))  # Redirect to password reset page
+        else:
+            flash("Phone number not found. Please enter a registered phone number.", "danger")
+            return redirect(url_for("admin_forget_password_sms"))  # Redirect to forget password page for admin
+    # Ensure a valid response is returned for all cases
+    return render_template("error.html", message="Invalid request")
+
 
 # Flask-Mail configuration for Gmail
 app.config["MAIL_SERVER"] = "smtp.gmail.com"
@@ -34,13 +71,17 @@ app.config["MAIL_PASSWORD"] = "turkishnews1234"
 app.config["MAIL_DEFAULT_SENDER"] = "turkish_news@gmail.com"
 mail = Mail(app)
 
-# MongoDB Configuration
-app.config[
-    "MONGO_URI"
-] = "mongodb+srv://aycelen:aycelen123@cluster0.6ofoijn.mongodb.net/?retryWrites=true&w=majority"
-# MODIFY THIS!!! You can use the link that I sent you separately
-mongo = PyMongo(app)
 
+
+mongo_uri = "mongodb+srv://aycelen:aycelen123@cluster0.6ofoijn.mongodb.net/?retryWrites=true&w=majority"
+client = MongoClient(mongo_uri)
+db = client.task4  # Replace "your_database" with your actual database name
+users_collection = db.users
+
+app.config[
+     "MONGO_URI"
+ ] = "mongodb+srv://aycelen:aycelen123@cluster0.6ofoijn.mongodb.net/task4?retryWrites=true&w=majority"
+mongo = PyMongo(app)
 
 # class for user login
 class LoginForm(FlaskForm):
@@ -442,4 +483,4 @@ def delete_comment(comment_id):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8080)
+    app.run(debug=True, port=3000)
