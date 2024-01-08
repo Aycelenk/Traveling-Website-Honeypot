@@ -22,6 +22,9 @@ import random
 import requests
 from pymongo import MongoClient
 from twilio.rest import Client
+from email_validator import validate_email, EmailNotValidError
+from datetime import datetime, timedelta, timezone
+
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "your_secret_key"
@@ -60,28 +63,27 @@ def forget_password_sms():
     # Ensure a valid response is returned for all cases
     return render_template("error.html", message="Invalid request")
 
-
-# Flask-Mail configuration for Gmail
-app.config["MAIL_SERVER"] = "smtp.gmail.com"
-app.config["MAIL_PORT"] = 587
-app.config["MAIL_USE_TLS"] = True
-app.config["MAIL_USE_SSL"] = False
-app.config["MAIL_USERNAME"] = "turkish_news@gmail.com"
-app.config["MAIL_PASSWORD"] = "turkishnews1234"
-app.config["MAIL_DEFAULT_SENDER"] = "turkish_news@gmail.com"
+# Flask-Mail configuration for SendGrid
+app.config['MAIL_SERVER']='sandbox.smtp.mailtrap.io'
+app.config['MAIL_PORT'] = 2525
+app.config['MAIL_USERNAME'] = '26dea73969a40d'
+app.config['MAIL_PASSWORD'] = '843fb4a3f8cc3c'
+app.config["MAIL_DEFAULT_SENDER"] = "cs437@yandex.com"
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
 mail = Mail(app)
 
 
-
-mongo_uri = "mongodb+srv://aycelen:aycelen123@cluster0.6ofoijn.mongodb.net/?retryWrites=true&w=majority"
+mongo_uri = "mongodb+srv://muslim:muslim123@cluster0.6ofoijn.mongodb.net/?retryWrites=true&w=majority"
 client = MongoClient(mongo_uri)
 db = client.task4  # Replace "your_database" with your actual database name
 users_collection = db.users
 
 app.config[
      "MONGO_URI"
- ] = "mongodb+srv://aycelen:aycelen123@cluster0.6ofoijn.mongodb.net/task4?retryWrites=true&w=majority"
+ ] = "mongodb+srv://muslim:muslim123@cluster0.6ofoijn.mongodb.net/task4?retryWrites=true&w=majority"
 mongo = PyMongo(app)
+
 
 # class for user login
 class LoginForm(FlaskForm):
@@ -107,12 +109,12 @@ class ForgetPasswordEmailForm(FlaskForm):
 
 # class to enter the code sent by email to froget password
 class ForgetPasswordCodeForm(FlaskForm):
-    code = StringField("Code", validators=[DataRequired(), Length(min=6, max=6)])
+    code = StringField("Code", validators=[DataRequired(), Length(min=2, max=2)])
     submit = SubmitField("Verify Code")
 
 
 #############################################################
-# CAPTCHA CREATION (static 4digit number for user, changin image based for admin)
+# CAPTCHA CREATION (static 2digit number for user, 4 digit changin number based for admin)
 
 
 @app.route("/captcha")
@@ -120,10 +122,14 @@ def serve_captcha():
     image_io = generate_captcha_image()
     return send_file(image_io, mimetype="image/png")
 
+@app.route("/admin_captcha")
+def serve_admin_captcha():
+    image_io = generate_admin_captcha_image()
+    return send_file(image_io, mimetype="image/png")
 
 def generate_captcha_image():
     # Use a static 4-digit number as CAPTCHA text
-    captcha_text = "5395"
+    captcha_text = "31"
 
     # Save the CAPTCHA text in the session
     session["captcha"] = captcha_text
@@ -141,17 +147,42 @@ def generate_captcha_image():
 
     return image_io
 
+def generate_admin_captcha_image():
+    # Generate a random 4-digit number for the CAPTCHA text for admin login
+    captcha_text = str(random.randint(1000, 9999))
+
+    # Save the CAPTCHA text in the session
+    session["admin_captcha"] = captcha_text
+
+    # Generate an image with the CAPTCHA text
+    image = Image.new("RGB", (120, 40), color="white")
+    draw = ImageDraw.Draw(image)
+    font = ImageFont.load_default()
+    draw.text((10, 10), captcha_text, font=font, fill="black")
+
+    # Save the image to a BytesIO object
+    image_io = io.BytesIO()
+    image.save(image_io, "PNG")
+    image_io.seek(0)
+
+    return image_io
 
 ##############################################################3
-# FORGET PASSWORD (@ mins expiration duration, send by email)
+# FORGET PASSWORD (2 mins expiration duration, 2 digit code, send by email for user only): DONE
 
-
-# fucntion to generate a reset code
+# function to generate a reset code along with timestamp
 def generate_reset_code():
-    return str(random.randint(100000, 999999))
+    reset_code = str(random.randint(10, 99))
+    timestamp = datetime.utcnow().replace(tzinfo=timezone.utc)
+    expiration_time = timestamp + timedelta(minutes=2)
+    return reset_code, expiration_time
+
+# function to check if the reset code has expired
+def is_code_expired(expiration_time):
+    return datetime.utcnow().replace(tzinfo=timezone.utc) > expiration_time
 
 
-# fucntion to send a message to email
+# function to send a message to email
 def send_reset_code_email(email, code):
     subject = "Password Reset Code"
     body = (
@@ -160,6 +191,7 @@ def send_reset_code_email(email, code):
     message = Message(subject, recipients=[email], body=body)
     mail.send(message)
 
+# fucntion to send email code
 
 @app.route("/forget_password_email", methods=["GET", "POST"])
 def forget_password_email():
@@ -169,9 +201,10 @@ def forget_password_email():
         email = form.email.data
         # Check if the email exists in the dataset
         if mongo.db.users.find_one({"email": email}):
+            reset_code, expiration_time = generate_reset_code()
             session["reset_email"] = email
-            reset_code = generate_reset_code()
             session["reset_code"] = reset_code
+            session["reset_code_expiration"] = expiration_time
             send_reset_code_email(email, reset_code)
             return redirect(url_for("forget_password_code"))
 
@@ -180,15 +213,20 @@ def forget_password_email():
 
     return render_template("forget_password_email.html", form=form)
 
+# function to verify code
 
 @app.route("/forget_password_code", methods=["GET", "POST"])
 def forget_password_code():
     form = ForgetPasswordCodeForm()
 
-    if "reset_email" not in session or "reset_code" not in session:
+    if "reset_email" not in session or "reset_code" not in session or "reset_code_expiration" not in session:
         flash(
             "Invalid request. Please start the password reset process again.", "danger"
         )
+        return redirect(url_for("login"))
+
+    if is_code_expired(session["reset_code_expiration"]):
+        flash("The reset code has expired. Please start the process again.", "danger")
         return redirect(url_for("login"))
 
     if form.validate_on_submit():
@@ -205,7 +243,7 @@ def forget_password_code():
 
     return render_template("forget_password_code.html", form=form)
 
-
+########################################################################################################################################
 # User router
 @app.route("/users", methods=["GET", "POST"])
 def users():
@@ -256,8 +294,9 @@ def login():
     if form.validate_on_submit():
         username = form.username.data
         password = form.password.data
+        captcha = form.captcha.data
 
-        if form.captcha.data != session["captcha"]:
+        if captcha != session["captcha"]:
             flash("CAPTCHA is incorrect.", "danger")
             return redirect(url_for("login"))
 
@@ -283,8 +322,10 @@ def admin_login():
     if form.validate_on_submit():
         username = form.username.data
         password = form.password.data
+        captcha = form.captcha.data
 
-        if form.captcha.data != session["captcha"]:
+
+        if captcha != session["admin_captcha"]:
             flash("CAPTCHA is incorrect.", "danger")
             return redirect(url_for("admin_login"))
 
@@ -297,7 +338,7 @@ def admin_login():
         else:
             flash("Admin Login unsuccessful. Check username and password.", "danger")
 
-    generate_captcha_image()
+    generate_admin_captcha_image()
 
     return render_template("admin_login.html", form=form)
 
@@ -439,18 +480,6 @@ def search():
 
     return render_template("search_results.html", query=query, search_results=None)
 
-
-# when we choose admin or user login in home_page.html
-@app.route("/choose_login/<role>", methods=["GET"])
-def choose_login(role):
-    if role == "user":
-        return redirect(url_for("login"))  # redirecting to login function
-    elif role == "admin":
-        return redirect(url_for("admin_login"))  # redirecting to admin login function
-    else:
-        return redirect(url_for("home"))
-    
-    
     
     
 # comment    
