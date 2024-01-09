@@ -26,42 +26,54 @@ from email_validator import validate_email, EmailNotValidError
 from datetime import datetime, timedelta, timezone
 
 
+
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "your_secret_key"
 
 #Twilio credentials
 account_sid = 'AC6f8da55ae34b0af3c16f6e8f0413cc53'##You yan enter your own credentials
 auth_token = 'bec735e9ec0f6ccee0d17adefb9e503a'
-twilio_phone_number = '+905534940657'
+twilio_phone_number = '+15162438196'
 
 # Twilio client initialization
-client = Client(account_sid, auth_token)
+client1 = Client(account_sid, auth_token)
 
 # function to send a password reset code via SMS
 def send_reset_code_sms(phone_number, code):
-    message = client.messages.create(
+    message = client1.messages.create(
         body=f"Your admin password reset code is: {code}. Enter this code to reset your password.",
         from_=twilio_phone_number,
         to=phone_number
     )
 
+
+class ForgetPasswordSmsForm(FlaskForm):
+    phone = StringField("phone", validators=[DataRequired(), Length(min=10, max=15)])
+    submit = SubmitField("Continue")
+
+
 ##Not working correctly right now
-@app.route("/admin/forget_password_sms", methods=["POST","GET"])
+@app.route("/forget_password_sms", methods=["POST","GET"])
 def forget_password_sms():
-    if request.method == "GET":
-        phone_number = request.form.get("phone")  # Assuming phone_number is provided in the form
+
+    form=ForgetPasswordSmsForm()
+    
+    if form.validate_on_submit():
+        phone_number = form.phone.data  # Assuming phone_number is provided in the form
         # Check if the phone_number exists in the dataset
-        if mongo.db.admins.find_one({"phone": phone_number}):##I'm assuming the problem is on this line
-            reset_code = generate_reset_code()  # Generate a reset code
+        if mongo.db.admins.find_one({"phone": phone_number}):
+            reset_code, expiration_time = generate_reset_code()# Generate a reset code
+            
             # Send the reset code via SMS
-            send_reset_code_sms(phone_number, reset_code)
+            send_reset_code_sms(phone_number, reset_code)##The problem is here right now
             session["reset_code"] = reset_code
             return redirect(url_for("admin_reset_password"))  # Redirect to password reset page
         else:
             flash("Phone number not found. Please enter a registered phone number.", "danger")
-            return redirect(url_for("forget_password_sms"))  # Redirect to forget password page for admin
+            return redirect(url_for("forget_password_sms")) # Redirect to forget password page for admin
     # Ensure a valid response is returned for all cases
-    return render_template("error.html", message="Invalid request")
+    return render_template("admin_forget_password_sms.html", form = form)
+
 
 # Flask-Mail configuration for SendGrid
 app.config['MAIL_SERVER']='sandbox.smtp.mailtrap.io'
@@ -74,14 +86,14 @@ app.config['MAIL_USE_SSL'] = False
 mail = Mail(app)
 
 
-mongo_uri = "mongodb+srv://muslim:muslim123@cluster0.6ofoijn.mongodb.net/?retryWrites=true&w=majority"
+mongo_uri = "mongodb+srv://aycelen:aycelen123@cluster0.6ofoijn.mongodb.net/?retryWrites=true&w=majority"
 client = MongoClient(mongo_uri)
 db = client.task4  # Replace "your_database" with your actual database name
 users_collection = db.users
 
 app.config[
      "MONGO_URI"
- ] = "mongodb+srv://muslim:muslim123@cluster0.6ofoijn.mongodb.net/task4?retryWrites=true&w=majority"
+ ] = "mongodb+srv://aycelen:aycelen123@cluster0.6ofoijn.mongodb.net/task4?retryWrites=true&w=majority"
 mongo = PyMongo(app)
 
 
