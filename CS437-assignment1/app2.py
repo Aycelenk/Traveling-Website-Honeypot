@@ -31,8 +31,8 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = "your_secret_key"
 
 #Twilio credentials
-account_sid = 'AC6f8da55ae34b0af3c16f6e8f0413cc53'##You yan enter your own credentials
-auth_token = 'bec735e9ec0f6ccee0d17adefb9e503a'
+account_sid = 'AC4c75b9ab6c8f8070098883783f24eade'##You yan enter your own credentials
+auth_token = '5239ca638843e3e9e1ce93f55ae9c3d3'
 twilio_phone_number = '+15162438196'
 
 # Twilio client initialization
@@ -40,11 +40,21 @@ client1 = Client(account_sid, auth_token)
 
 # function to send a password reset code via SMS
 def send_reset_code_sms(phone_number, code):
+    print("here")
     message = client1.messages.create(
         body=f"Your admin password reset code is: {code}. Enter this code to reset your password.",
         from_=twilio_phone_number,
         to=phone_number
     )
+    print(message.sid)
+    print(message.body)
+    print(message.status)
+
+     
+
+class ForgetPasswordSmsCodeForm(FlaskForm):
+    code = StringField("Code", validators=[DataRequired(), Length(min=2, max=2)])
+    submit = SubmitField("Verify Code")
 
 
 class ForgetPasswordSmsForm(FlaskForm):
@@ -63,10 +73,14 @@ def forget_password_sms():
         # Check if the phone_number exists in the dataset
         if mongo.db.admins.find_one({"phone": phone_number}):
             reset_code, expiration_time = generate_reset_code()# Generate a reset code
-            
+            print("2")
+            print(phone_number)
             # Send the reset code via SMS
             send_reset_code_sms(phone_number, reset_code)##The problem is here right now
             session["reset_code"] = reset_code
+            session["expiration_time"] = expiration_time
+            session["reset_phone_number"] = phone_number
+            print("1")
             return redirect(url_for("admin_reset_password"))  # Redirect to password reset page
         else:
             flash("Phone number not found. Please enter a registered phone number.", "danger")
@@ -74,6 +88,29 @@ def forget_password_sms():
     # Ensure a valid response is returned for all cases
     return render_template("admin_forget_password_sms.html", form = form)
 
+@app.route("/admin_reset_password", methods=["GET","POST"])
+def admin_reset_password():
+    form =ForgetPasswordSmsCodeForm()
+
+    if "reset_phone_number" not in session or "reset_code" not in session or "expiration_time" not in session:
+        flash("Invlid request. Please start the password reset process again.", "danger")
+        return redirect(url_for("admin_login"))
+    
+    if is_code_expired(session["expiration_time"]):
+        flash("The reset code has expired. Please start the process again.", "danger")
+        return redirect(url_for("admin_login"))
+    
+    if form.validate_on_submit():
+        entered_code = form.code.data
+        if entered_code == session["reset_code"]:
+
+            flash("Code verified. You can now reset your password.", "success")
+
+            return redirect(url_for("admin_login"))
+        else: 
+            flash("Invalid code. Please enter the correct code.", "danger")
+
+    return render_template("admin_reset_password.html", form=form)
 
 # Flask-Mail configuration for SendGrid
 app.config['MAIL_SERVER']='sandbox.smtp.mailtrap.io'
