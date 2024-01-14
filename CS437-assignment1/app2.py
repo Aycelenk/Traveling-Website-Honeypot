@@ -514,9 +514,6 @@ def home():
         )
 
 
-from flask import request
-
-
 @app.route("/all_countries")
 def all_countries():
     # Fetch data from the API
@@ -550,8 +547,6 @@ def all_countries():
             "all_countries.html", error_message="Failed to fetch or parse data"
         )
 
-
-from flask import request
 
 
 @app.route("/search", methods=["GET"])
