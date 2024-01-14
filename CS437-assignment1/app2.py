@@ -32,8 +32,9 @@ from logging.handlers import RotatingFileHandler
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "your_secret_key"
+app.logger.setLevel(logging.INFO)
 
-handler = RotatingFileHandler('app.log', maxBytes=10000, backupCount=1)
+handler = RotatingFileHandler('app.log', maxBytes=10000, backupCount=10)
 handler.setLevel(logging.INFO)
 app.logger.addHandler(handler)
 
@@ -54,7 +55,7 @@ def monitoring():
     # Read log entries
     with open('app.log', 'r') as log_file:
         log_entries = log_file.readlines()
-
+    print("Log Entries:",log_entries) 
     # Classify attacks
     attack_classifications = [classify_attack(log_entry) for log_entry in log_entries]
 
@@ -398,7 +399,10 @@ def login():
         if captcha != session["captcha"]:
             flash("CAPTCHA is incorrect.", "danger")
             return redirect(url_for("login"))
-
+        
+        # Log the login attempt
+        log_entry = f"User login attempt - Username: {username}, Time: {datetime.now()}"
+        app.logger.info(log_entry)
         user = mongo.db.users.find_one({"username": username, "password": password})
 
         if user:
@@ -408,6 +412,11 @@ def login():
 
         else:
             flash("Login unsuccessful. Check username and password.", "danger")
+             # Classify the unsuccessful login attempt as a potential attack
+            attack_classification = classify_attack("Invalid password")
+
+            # Log the attack classification
+            app.logger.warning(f"Attack Classification - {attack_classification}")
 
     generate_captcha_image()
 
@@ -424,11 +433,12 @@ def admin_login():
         password = form.password.data
         captcha = form.captcha.data
 
-
         if captcha != session["admin_captcha"]:
             flash("CAPTCHA is incorrect.", "danger")
             return redirect(url_for("admin_login"))
-
+        
+        log_entry = f"Admin login attempt - Username: {username}, Time: {datetime.now()}"
+        app.logger.info(log_entry)
         admin = mongo.db.admins.find_one({"username": username, "password": password})
 
         if admin:
@@ -438,6 +448,11 @@ def admin_login():
 
         else:
             flash("Admin Login unsuccessful. Check username and password.", "danger")
+             # Classify the unsuccessful login attempt as a potential attack
+            attack_classification = classify_attack(log_entry)
+
+            # Log the attack classification
+            app.logger.warning(f"Attack Classification - {attack_classification}")
 
     generate_admin_captcha_image()
 
