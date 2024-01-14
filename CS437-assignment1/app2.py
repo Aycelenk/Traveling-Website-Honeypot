@@ -25,10 +25,46 @@ from twilio.rest import Client
 from email_validator import validate_email, EmailNotValidError
 from datetime import datetime, timedelta, timezone
 from wtforms.validators import EqualTo
+import logging
+from logging.handlers import RotatingFileHandler
+
 
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "your_secret_key"
+
+handler = RotatingFileHandler('app.log', maxBytes=10000, backupCount=1)
+handler.setLevel(logging.INFO)
+app.logger.addHandler(handler)
+
+
+def classify_attack(log_entry):
+    # Implement attack classification logic based on log entries
+    if "Invalid code" in log_entry:
+        return "Brute Force Attempt"
+    elif "Invalid password" in log_entry:
+        return "Invalid Password Attempt"
+    else:
+        return "Unclassified"
+    
+    
+# Monitoring route
+@app.route("/monitoring")
+def monitoring():
+    # Read log entries
+    with open('app.log', 'r') as log_file:
+        log_entries = log_file.readlines()
+
+    # Classify attacks
+    attack_classifications = [classify_attack(log_entry) for log_entry in log_entries]
+
+    # Combine log entries and attack classifications using zip
+    combined_data = zip(log_entries, attack_classifications)
+
+    # Render the monitoring template with the combined data
+    return render_template("monitoring.html", combined_data=combined_data)
+
+
 
 #Twilio credentials
 account_sid = 'AC4c75b9ab6c8f8070098883783f24eade'##You yan enter your own credentials
