@@ -623,41 +623,52 @@ def delete_comment(comment_id):
         return redirect(url_for("get_comments"))
 
 
-
 @app.route("/admin_panel")
 def admin_panel():
     # Check if the user is logged in and is an admin
     if "user_role" in session and session["user_role"] == "admin":
-        response = requests.get("http://127.0.0.1:3000/users")
-        if response.status_code == 200:
-            users = response.json()["users"]
-            return render_template("admin_panel.html", users=users)
+        # Fetch users from the API
+        users_response = requests.get("http://127.0.0.1:3000/users")
+        if users_response.status_code == 200:
+            users = users_response.json()["users"]
         else:
-            return render_template("admin_panel.html", users= None)
-        # Continue rendering the admin panel for admins
-        return render_template("admin_panel.html")
+            users = None
+
+        # Fetch comments from the API
+        comments_response = requests.get("http://127.0.0.1:3000/comment")
+        if comments_response.status_code == 200:
+            comments = comments_response.json()["comments"]
+        else:
+            comments = None
+
+        return render_template("admin_panel.html", users=users, comments=comments)
+        
     else:
         # Redirect to the login page or show an error message
         flash("You don't have permission to access this page.", "danger")
         return redirect(url_for("admin_login"))  # Adjust the route to your login page
 
 
-
-
-# Replace this with the actual API endpoint
-USERS_API_ENDPOINT = "http://127.0.0.1:3000/users"
-
 @app.route('/delete_user/<string:user_id>', methods=['POST'])
 def delete_user(user_id):
     # Check if the user is an admin
     if "user_role" in session and session["user_role"] == "admin":
         mongo.db.users.delete_one({"_id": ObjectId(user_id)})
-        # Implement logic to delete the user with the given user_id
-        # For simplicity, I'm just printing the user ID here
-        print("Deleting user with ID:", user_id)
-        # You can update your users_data or make an API request to delete the user from your database
-        # Example: users_data.remove(user_data_with_user_id)
         flash("User deleted successfully.", "success")
+    else:
+        flash("You are not authorized to perform this action.", "danger")
+    
+    return redirect(url_for('admin_panel'))
+
+
+@app.route('/delete_comment/<string:comment_id>', methods=['POST'])
+def delete_comment_admin_panel(comment_id):
+    # Check if the user is an admin
+    if "user_role" in session and session["user_role"] == "admin":
+        
+        mongo.db.comments.delete_one({"_id": ObjectId(comment_id)})
+
+        flash("Comment deleted successfully.", "success")
     else:
         flash("You are not authorized to perform this action.", "danger")
     
