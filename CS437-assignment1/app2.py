@@ -401,7 +401,7 @@ def login():
 
         if captcha != session["captcha"]:
             flash("CAPTCHA is incorrect.", "danger")
-            log_entry = f"User login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull User Login Attempt"
+            log_entry = f"User login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull User Login Attempt, with wrong captcha"
             app.logger.info(log_entry)
             return redirect(url_for("login"))
 
@@ -420,7 +420,7 @@ def login():
             flash("Login unsuccessful. Check username and password.", "danger")
             # Classify the unsuccessful login attempt as a potential attack
             #attack_classification = classify_attack(log_entry)
-            log_entry = f"User login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull User Login Attempt"
+            log_entry = f"User login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull User Login Attempt, with wrong password"
             app.logger.info(log_entry)
             # Log the attack classification
             #app.logger.warning(f"Attack Classification - {attack_classification}")
@@ -441,7 +441,7 @@ def admin_login():
 
         if captcha != session["admin_captcha"]:
             flash("CAPTCHA is incorrect.", "danger")
-            log_entry = f"Admin login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull Admin Login Attempt,"
+            log_entry = f"Admin login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull Admin Login Attempt, with wrong captcha,"
             app.logger.info(log_entry)
             return redirect(url_for("admin_login"))
 
@@ -461,7 +461,7 @@ def admin_login():
             #attack_classification = classify_attack(log_entry)
 
             # Log the attack classification
-            log_entry = f"Admin login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull Admin Login Attempt,"
+            log_entry = f"Admin login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull Admin Login Attempt, with wrong password,"
             app.logger.info(log_entry)
 
     generate_admin_captcha_image()
