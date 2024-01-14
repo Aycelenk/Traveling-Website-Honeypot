@@ -1,14 +1,2 @@
-Attack Classification - Unclassified
-Attack Classification - Unclassified
-Attack Classification - Unclassified
-Attack Classification - Unclassified
-Attack Classification - Unclassified
-Attack Classification - Unclassified
-Admin login attempt - Username: admin, Time: 2024-01-14 16:11:52.643080
-Attack Classification - Unclassified
-Admin login attempt - Username: admin, Time: 2024-01-14 16:12:30.286993
-User login attempt - Username: aycelen, Time: 2024-01-14 16:33:40.761470
-Attack Classification - Unclassified
-Admin login attempt - Username: admin, Time: 2024-01-14 16:45:43.434937
-Admin login attempt - Username: admin, Time: 2024-01-14 17:02:02.409111
-Attack Classification - Unclassified
+Admin login attempt - Username: admin, Password: d, CAPTCHA: 2323, Time: 2024-01-14 19:26:21.980009, Unsuccessfull Admin Login Attempt,
+Admin login attempt - Username: admin, Password: c, CAPTCHA: 6794, Time: 2024-01-14 19:26:30.314200, Admin Login Successfull,

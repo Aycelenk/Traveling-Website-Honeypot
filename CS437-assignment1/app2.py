@@ -48,28 +48,31 @@ def classify_attack(log_entry):
     else:
         return "Unclassified"
     
-    
 # Monitoring route
 @app.route("/monitoring")
 def monitoring():
-    # Read log entries
-    with open('app.log', 'r') as log_file:
-        log_entries = log_file.readlines()
-    print("Log Entries:",log_entries) 
-    # Classify attacks
-    attack_classifications = [classify_attack(log_entry) for log_entry in log_entries]
+    # Check if the user is an admin
+    if "user_role" in session and session["user_role"] == "admin":
+        # Read log entries
+        with open('app.log', 'r') as log_file:
+            log_entries = log_file.readlines()
+        print("Log Entries:", log_entries) 
+        # Classify attacks
+        attack_classifications = [classify_attack(log_entry) for log_entry in log_entries]
 
-    # Combine log entries and attack classifications using zip
-    combined_data = zip(log_entries, attack_classifications)
+        # Combine log entries and attack classifications using zip
+        combined_data = zip(log_entries, attack_classifications)
 
-    # Render the monitoring template with the combined data
-    return render_template("monitoring.html", combined_data=combined_data)
-
+        # Render the monitoring template with the combined data
+        return render_template("monitoring.html", combined_data=combined_data)
+    else:
+        flash("You are not authorized to access the monitoring page.", "danger")
+        return redirect(url_for('home'))
 
 
 #Twilio credentials
 account_sid = 'AC4c75b9ab6c8f8070098883783f24eade'##You yan enter your own credentials
-auth_token = '5239ca638843e3e9e1ce93f55ae9c3d3'
+auth_token = '9d480bd0ef09816d4d9181594e8535bc'
 twilio_phone_number = '+15162438196'
 
 # Twilio client initialization
@@ -398,28 +401,31 @@ def login():
 
         if captcha != session["captcha"]:
             flash("CAPTCHA is incorrect.", "danger")
+            log_entry = f"User login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull User Login Attempt"
+            app.logger.info(log_entry)
             return redirect(url_for("login"))
-        
-        # Log the login attempt
-        log_entry = f"User login attempt - Username: {username}, Time: {datetime.now()}"
+
+        log_entry = f"User login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}"
         app.logger.info(log_entry)
         user = mongo.db.users.find_one({"username": username, "password": password})
 
         if user:
             flash("Login successful!", "success")
             session["user_role"] = "user"  # Set the session variable for the admin role
+            # Log successful login
+            log_entry = f"User login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, User Login Successfull"
+            app.logger.info(log_entry)
             return redirect(url_for("home"))
-
         else:
             flash("Login unsuccessful. Check username and password.", "danger")
-             # Classify the unsuccessful login attempt as a potential attack
-            attack_classification = classify_attack("Invalid password")
-
+            # Classify the unsuccessful login attempt as a potential attack
+            #attack_classification = classify_attack(log_entry)
+            log_entry = f"User login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull User Login Attempt"
+            app.logger.info(log_entry)
             # Log the attack classification
-            app.logger.warning(f"Attack Classification - {attack_classification}")
+            #app.logger.warning(f"Attack Classification - {attack_classification}")
 
     generate_captcha_image()
-
     return render_template("login.html", form=form)
 
 
@@ -435,27 +441,30 @@ def admin_login():
 
         if captcha != session["admin_captcha"]:
             flash("CAPTCHA is incorrect.", "danger")
+            log_entry = f"Admin login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull Admin Login Attempt,"
+            app.logger.info(log_entry)
             return redirect(url_for("admin_login"))
+
         
-        log_entry = f"Admin login attempt - Username: {username}, Time: {datetime.now()}"
-        app.logger.info(log_entry)
         admin = mongo.db.admins.find_one({"username": username, "password": password})
 
         if admin:
             flash("Admin Login successful!", "success")
             session["user_role"] = "admin"  # Set the session variable for the admin role
+            # Log successful login
+            log_entry = f"Admin login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Admin Login Successfull,"
+            app.logger.info(log_entry)
             return redirect(url_for("home"))
-
         else:
             flash("Admin Login unsuccessful. Check username and password.", "danger")
-             # Classify the unsuccessful login attempt as a potential attack
-            attack_classification = classify_attack(log_entry)
+            # Classify the unsuccessful login attempt as a potential attack
+            #attack_classification = classify_attack(log_entry)
 
             # Log the attack classification
-            app.logger.warning(f"Attack Classification - {attack_classification}")
+            log_entry = f"Admin login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull Admin Login Attempt,"
+            app.logger.info(log_entry)
 
     generate_admin_captcha_image()
-
     return render_template("admin_login.html", form=form)
 
 
