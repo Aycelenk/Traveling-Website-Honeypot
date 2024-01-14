@@ -38,6 +38,7 @@ twilio_phone_number = '+15162438196'
 # Twilio client initialization
 client1 = Client(account_sid, auth_token)
 
+
 # function to send a password reset code via SMS
 def send_reset_code_sms(phone_number, code):
     print("here")
@@ -324,10 +325,10 @@ def users():
 
 
 #  user deletion router
-@app.route("/users/<user_id>", methods=["DELETE"])
-def delete_user(user_id):
-    mongo.db.users.delete_one({"_id": ObjectId(user_id)})
-    return jsonify({"message": "User deleted successfully!"})
+#@app.route("/users/<user_id>", methods=["DELETE"])
+#def delete_user(user_id):
+#    mongo.db.users.delete_one({"_id": ObjectId(user_id)})
+#    return jsonify({"message": "User deleted successfully!"})
 
 
 # Admin router
@@ -621,5 +622,45 @@ def delete_comment(comment_id):
         flash("You are not authorized to perform this action.", "danger")
         return redirect(url_for("get_comments"))
 
+
+
+@app.route("/admin_panel")
+def admin_panel():
+    # Check if the user is logged in and is an admin
+    if "user_role" in session and session["user_role"] == "admin":
+        response = requests.get("http://127.0.0.1:3000/users")
+        if response.status_code == 200:
+            users = response.json()["users"]
+            return render_template("admin_panel.html", users=users)
+        else:
+            return render_template("admin_panel.html", users= None)
+        # Continue rendering the admin panel for admins
+        return render_template("admin_panel.html")
+    else:
+        # Redirect to the login page or show an error message
+        flash("You don't have permission to access this page.", "danger")
+        return redirect(url_for("admin_login"))  # Adjust the route to your login page
+
+
+
+
+# Replace this with the actual API endpoint
+USERS_API_ENDPOINT = "http://127.0.0.1:3000/users"
+
+@app.route('/delete_user/<string:user_id>', methods=['POST'])
+def delete_user(user_id):
+    # Check if the user is an admin
+    if "user_role" in session and session["user_role"] == "admin":
+        mongo.db.users.delete_one({"_id": ObjectId(user_id)})
+        # Implement logic to delete the user with the given user_id
+        # For simplicity, I'm just printing the user ID here
+        print("Deleting user with ID:", user_id)
+        # You can update your users_data or make an API request to delete the user from your database
+        # Example: users_data.remove(user_data_with_user_id)
+        flash("User deleted successfully.", "success")
+    else:
+        flash("You are not authorized to perform this action.", "danger")
+    
+    return redirect(url_for('admin_panel'))
 if __name__ == "__main__":
     app.run(debug=True, port=3000)
