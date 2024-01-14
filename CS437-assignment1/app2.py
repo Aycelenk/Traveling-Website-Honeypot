@@ -337,8 +337,7 @@ def forget_password_code():
         if entered_code == session["reset_code"]:
             # Code is valid, allow the user to reset the password
             flash("Code verified. You can now reset your password.", "success")
-            # You can redirect the user to the password reset page here
-            # For simplicity, let's redirect back to the login page
+           
             return redirect(url_for("login"))
 
         else:
@@ -363,12 +362,6 @@ def users():
         user["_id"] = str(user["_id"])  # Convert ObjectId to string
         return jsonify({"user": user})
 
-
-#  user deletion router
-#@app.route("/users/<user_id>", methods=["DELETE"])
-#def delete_user(user_id):
-#    mongo.db.users.delete_one({"_id": ObjectId(user_id)})
-#    return jsonify({"message": "User deleted successfully!"})
 
 
 # Admin router
@@ -398,32 +391,29 @@ def login():
         username = form.username.data
         password = form.password.data
         captcha = form.captcha.data
-
+        user_ip = request.remote_addr
         if captcha != session["captcha"]:
             flash("CAPTCHA is incorrect.", "danger")
-            log_entry = f"User login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull User Login Attempt, with wrong captcha"
+            log_entry = f"User login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha},  IP: {user_ip},Time: {datetime.now()}, status: Unsuccessfull, wrong captcha"
             app.logger.info(log_entry)
             return redirect(url_for("login"))
 
-        log_entry = f"User login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}"
-        app.logger.info(log_entry)
+       
         user = mongo.db.users.find_one({"username": username, "password": password})
 
         if user:
             flash("Login successful!", "success")
             session["user_role"] = "user"  # Set the session variable for the admin role
             # Log successful login
-            log_entry = f"User login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, User Login Successfull"
+            log_entry = f"User login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, IP: {user_ip}, Time: {datetime.now()}, status: Successfull"
             app.logger.info(log_entry)
             return redirect(url_for("home"))
         else:
             flash("Login unsuccessful. Check username and password.", "danger")
-            # Classify the unsuccessful login attempt as a potential attack
-            #attack_classification = classify_attack(log_entry)
-            log_entry = f"User login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull User Login Attempt, with wrong password"
+
+            log_entry = f"User login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, IP: {user_ip},Time: {datetime.now()}, status: Unsuccessfull, wrong password"
             app.logger.info(log_entry)
-            # Log the attack classification
-            #app.logger.warning(f"Attack Classification - {attack_classification}")
+
 
     generate_captcha_image()
     return render_template("login.html", form=form)
@@ -439,9 +429,11 @@ def admin_login():
         password = form.password.data
         captcha = form.captcha.data
 
+        user_ip = request.remote_addr
+
         if captcha != session["admin_captcha"]:
             flash("CAPTCHA is incorrect.", "danger")
-            log_entry = f"Admin login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull Admin Login Attempt, with wrong captcha,"
+            log_entry = f"Admin login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, IP: {user_ip}, Time: {datetime.now()}, status: Unsuccessfull, wrong captcha,"
             app.logger.info(log_entry)
             return redirect(url_for("admin_login"))
 
@@ -452,16 +444,14 @@ def admin_login():
             flash("Admin Login successful!", "success")
             session["user_role"] = "admin"  # Set the session variable for the admin role
             # Log successful login
-            log_entry = f"Admin login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Admin Login Successfull,"
+            log_entry = f"Admin login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, IP: {user_ip},Time: {datetime.now()}, status: Successfull,"
             app.logger.info(log_entry)
             return redirect(url_for("home"))
         else:
             flash("Admin Login unsuccessful. Check username and password.", "danger")
-            # Classify the unsuccessful login attempt as a potential attack
-            #attack_classification = classify_attack(log_entry)
-
+    
             # Log the attack classification
-            log_entry = f"Admin login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, Time: {datetime.now()}, Unsuccessfull Admin Login Attempt, with wrong password,"
+            log_entry = f"Admin login attempt - Username: {username}, Password: {password}, CAPTCHA: {captcha}, IP: {user_ip}, Time: {datetime.now()}, status: Unsuccessfull, wrong password,"
             app.logger.info(log_entry)
 
     generate_admin_captcha_image()
@@ -608,7 +598,7 @@ def search():
     
     
 # comment    
-@app.route("/comment", methods=["GET", "POST"])  # GUYS !!! Needs to be implemented in the fronted 
+@app.route("/comment", methods=["GET", "POST"])  
 def comment():
     if request.method == "GET":
         comments = mongo.db.comments.find()
@@ -626,12 +616,6 @@ def comment():
         comment["_id"] = str(comment["_id"])  
         return jsonify({"comment": comment})
 
-
-# comment deletion router
-#@app.route("/comment/<comment_id>", methods=["DELETE"])  # GUYS !!! Needs to be implemented in the fronted 
-#def delete_comment(comment_id):
-#    mongo.db.comments.delete_one({"_id": ObjectId(comment_id)})
-#    return jsonify({"message": "Comment deleted successfully!"})
 
 import requests
 
