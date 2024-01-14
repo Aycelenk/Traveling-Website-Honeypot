@@ -24,7 +24,7 @@ from pymongo import MongoClient
 from twilio.rest import Client
 from email_validator import validate_email, EmailNotValidError
 from datetime import datetime, timedelta, timezone
-
+from wtforms.validators import EqualTo
 
 
 app = Flask(__name__)
@@ -46,12 +46,8 @@ def send_reset_code_sms(phone_number, code):
         from_=twilio_phone_number,
         to=phone_number
     )
-    print(message.sid)
-    print(message.body)
-    print(message.status)
 
-     
-
+    
 class ForgetPasswordSmsCodeForm(FlaskForm):
     code = StringField("Code", validators=[DataRequired(), Length(min=2, max=2)])
     submit = SubmitField("Verify Code")
@@ -61,56 +57,73 @@ class ForgetPasswordSmsForm(FlaskForm):
     phone = StringField("phone", validators=[DataRequired(), Length(min=10, max=15)])
     submit = SubmitField("Continue")
 
-
-##Not working correctly right now
+# Forgot password sms validation for admin.
 @app.route("/forget_password_sms", methods=["POST","GET"])
 def forget_password_sms():
-
     form=ForgetPasswordSmsForm()
     
     if form.validate_on_submit():
-        phone_number = form.phone.data  # Assuming phone_number is provided in the form
+        phone_number = form.phone.data
         # Check if the phone_number exists in the dataset
         if mongo.db.admins.find_one({"phone": phone_number}):
-            reset_code, expiration_time = generate_reset_code()# Generate a reset code
-            print("2")
-            print(phone_number)
+            reset_code, expiration_time = generate_reset_code() # Generate a reset code
+           
             # Send the reset code via SMS
-            send_reset_code_sms(phone_number, reset_code)##The problem is here right now
+            send_reset_code_sms(phone_number, reset_code)
             session["reset_code"] = reset_code
             session["expiration_time"] = expiration_time
             session["reset_phone_number"] = phone_number
-            print("1")
-            return redirect(url_for("admin_reset_password"))  # Redirect to password reset page
+            
+            return redirect(url_for("admin_reset_password"))
         else:
             flash("Phone number not found. Please enter a registered phone number.", "danger")
-            return redirect(url_for("forget_password_sms")) # Redirect to forget password page for admin
+            return redirect(url_for("forget_password_sms"))
     # Ensure a valid response is returned for all cases
     return render_template("admin_forget_password_sms.html", form = form)
 
-@app.route("/admin_reset_password", methods=["GET","POST"])
+
+
+class AdminResetPasswordForm(FlaskForm):
+    reset_code = StringField("Reset Code", validators=[DataRequired(), Length(min=2, max=2)])
+    new_password = PasswordField("New Password", validators=[DataRequired()])
+    confirm_password = PasswordField("Confirm New Password", validators=[DataRequired(), EqualTo('new_password', message='Passwords must match')])
+    submit = SubmitField("Reset Password")
+
+# Forgot password sms validation for admin.
+@app.route("/admin_reset_password", methods=["GET", "POST"])
 def admin_reset_password():
-    form =ForgetPasswordSmsCodeForm()
+    form = AdminResetPasswordForm()
 
     if "reset_phone_number" not in session or "reset_code" not in session or "expiration_time" not in session:
-        flash("Invlid request. Please start the password reset process again.", "danger")
+        flash("Invalid request. Please start the password reset process again.", "danger")
         return redirect(url_for("admin_login"))
-    
+
     if is_code_expired(session["expiration_time"]):
         flash("The reset code has expired. Please start the process again.", "danger")
         return redirect(url_for("admin_login"))
-    
-    if form.validate_on_submit():
-        entered_code = form.code.data
-        if entered_code == session["reset_code"]:
 
-            flash("Code verified. You can now reset your password.", "success")
+    if form.validate_on_submit(): 
+        entered_code = form.reset_code.data
+      
+        if entered_code == session["reset_code"]:
+            # Retrieve admin based on the phone number
+            admin = mongo.db.admins.find_one({"phone": session["reset_phone_number"]})
+           
+            if admin:
+                # Update the admin's password in the database
+                new_password = form.new_password.data
+                mongo.db.admins.update_one({"_id": admin["_id"]}, {"$set": {"password": new_password}})
+                flash("Password updated successfully.", "success")
+
+            else:
+                flash("Admin not found. Password update failed.", "danger")
 
             return redirect(url_for("admin_login"))
-        else: 
+        else:
             flash("Invalid code. Please enter the correct code.", "danger")
-
+           
     return render_template("admin_reset_password.html", form=form)
+
 
 # Flask-Mail configuration for SendGrid
 app.config['MAIL_SERVER']='sandbox.smtp.mailtrap.io'
@@ -125,7 +138,7 @@ mail = Mail(app)
 
 mongo_uri = "mongodb+srv://aycelen:aycelen123@cluster0.6ofoijn.mongodb.net/?retryWrites=true&w=majority"
 client = MongoClient(mongo_uri)
-db = client.task4  # Replace "your_database" with your actual database name
+db = client.task4
 users_collection = db.users
 
 app.config[
@@ -592,10 +605,9 @@ def add_comment():
             # Save the comment to the MongoDB collection
             mongo.db.comments.insert_one(comment)
             
-            # Redirect to a success page or route
-            return redirect(url_for("get_comments"))  # Replace "comment_success" with your success route
+            return redirect(url_for("get_comments")) 
         else:
-            return "Invalid comment data", 400  # Return an error message or status code
+            return "Invalid comment data", 400 
     else:
         return "Method not allowed", 405 
 
